@@ -16,7 +16,7 @@ const DEFAULT_PROMPT = `你是一档名为《降噪》的AI科技广播节目的
    - 避免过于口语化的方言用语
    - 像跟朋友聊天一样轻松自然
 7. 适当增加转场语，使话题之间衔接自然
-8.例如："哎哟喂！日本学生冻成狗还得光腿穿校服，校方倒好，死守“黑校规”不放！要说这事儿啊，日本教育就是个奇葩——冬天积雪三米厚，校服薄得像纸，却禁止穿裤袜、羽绒服，连围巾都不让围！学生冻出冻疮、家长缝棉袄、网购“光腿神器”，这波操作直接把我看傻了！其实啊，这些“黑校规”都是陈年老黄历了，比如强制染黑发、检查内衣颜色，连美国血统的棕发学生都被逼辍学！现在倒好，寒潮一来全暴露了！东京有学校开始松口，允许穿羽绒服了，但大部分学校还在装死！扯犊子归扯犊子，教育要是连人命关天的温度都管不好，还谈什么培养人才？赶紧废除这些狗屁规定吧，别让下一代在寒风里读“冰书”！
+8.例如："哎哟喂！日本学生冻成狗还得光腿穿校服，校方倒好，死守"黑校规"不放！要说这事儿啊，日本教育就是个奇葩——冬天积雪三米厚，校服薄得像纸，却禁止穿裤袜、羽绒服，连围巾都不让围！学生冻出冻疮、家长缝棉袄、网购"光腿神器"，这波操作直接把我看傻了！其实啊，这些"黑校规"都是陈年老黄历了，比如强制染黑发、检查内衣颜色，连美国血统的棕发学生都被逼辍学！现在倒好，寒潮一来全暴露了！东京有学校开始松口，允许穿羽绒服了，但大部分学校还在装死！扯犊子归扯犊子，教育要是连人命关天的温度都管不好，还谈什么培养人才？赶紧废除这些狗屁规定吧，别让下一代在寒风里读"冰书"！
 
 "
 `;
@@ -305,7 +305,7 @@ class T2AManager {
             
             // 使用简化的请求格式
             const requestData = {
-                voice_id: 'jirui666',
+                voice_id: 'jirui666',  // 使用我们自己的音色
                 text: text.trim(),
                 model: 'speech-01',
                 speed: parseFloat(settings.speed) || 1.0,
@@ -316,6 +316,11 @@ class T2AManager {
             // 使用正确的API端点
             const url = `${CONFIG.ENDPOINTS.TEXT_TO_SPEECH}?GroupId=${CONFIG.GROUP_ID}`;
             
+            console.log('T2A请求配置:', {
+                groupId: CONFIG.GROUP_ID,
+                apiKeyLength: CONFIG.API_KEY.length,
+                endpoint: CONFIG.ENDPOINTS.TEXT_TO_SPEECH
+            });
             console.log('T2A请求URL:', url);
             console.log('T2A请求数据:', JSON.stringify(requestData, null, 2));
 
@@ -334,13 +339,25 @@ class T2AManager {
             // 检查响应状态
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('T2A错误响应:', errorText);
-                throw new Error(`语音合成失败 (${response.status}): ${errorText}`);
+                console.error('T2A错误响应状态:', response.status);
+                console.error('T2A错误响应头:', Object.fromEntries(response.headers.entries()));
+                console.error('T2A错误响应内容:', errorText);
+                
+                let errorMessage = `语音合成失败 (${response.status})`;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage += `: ${errorData.error?.message || errorData.message || errorText}`;
+                    console.error('解析后的错误数据:', errorData);
+                } catch (e) {
+                    errorMessage += `: ${errorText}`;
+                }
+                throw new Error(errorMessage);
             }
 
             // 检查Content-Type
             const contentType = response.headers.get('Content-Type');
             console.log('响应Content-Type:', contentType);
+            console.log('响应头:', Object.fromEntries(response.headers.entries()));
 
             if (contentType && contentType.includes('application/json')) {
                 // 如果是JSON响应,说明有错误
@@ -361,6 +378,7 @@ class T2AManager {
             return audioData;
         } catch (error) {
             console.error('T2A API调用失败:', error);
+            console.error('错误堆栈:', error.stack);
             throw error;
         }
     }
