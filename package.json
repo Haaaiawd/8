@@ -1,0 +1,12 @@
+{
+  "name": "noise-reduction-ai-broadcast-editor",
+  "version": "1.0.0",
+  "description": "AI-powered broadcast content editor",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -p 3000 -c-1"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
