@@ -9,7 +9,7 @@ const CONFIG = {
     // API端点
     ENDPOINTS: {
         TEXT: "https://api.minimax.chat/v1/text/chatcompletion_v2",
-        T2A: "https://api.minimax.chat/v1/t2a_v2"
+        TEXT_TO_SPEECH: "https://api.minimax.chat/v1/text_to_speech"
     },
     
     // 语音设置默认值

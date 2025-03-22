@@ -7,16 +7,18 @@ const DEFAULT_PROMPT = `你是一档名为《降噪》的AI科技广播节目的
 
 要求：
 1. 请先全面的阅读一遍所有的新闻
-2. 使用疯癫的吉瑞的身份，用怪诞疯癫又有讽刺性的却暗含哲理，给AI小白讲清楚最新的资讯
+2. 使用疯癫的吉瑞的身份，模仿马督工的语气和风格，给AI小白讲清楚最新的资讯
 3. 每个新闻控制在100字以内，确保听众能在短时间内抓住重点
 4. 语言风格要求：
    - 用怪诞疯癫却大白话表达
+   - 结合马督工的语言特点，喜欢引申，针砭时弊。
    - 适当使用语气词增加自然感（比如"嗯"、"那么"、"其实"等）
    - 避免过于口语化的方言用语
    - 像跟朋友聊天一样轻松自然
-6. 在保持通俗易懂的同时，准确传达AI技术的关键概念
 7. 适当增加转场语，使话题之间衔接自然
-8.例如："（敲击铁锅开场）哈！各位AI小饼干听好了！今天吉瑞老师用大葱蘸着电子酱料给你们讲新闻！（突然压低声音）听说霓虹国高中生的裤袜啊…（突然尖叫）被校规封印啦！黑色！禁！禁！禁！（敲锣）明明营养均衡的裤袜就像神经网络嘛——输入什么颜色都能自适应输出文明！可那些校规老顽固啊（打喷嚏）活像过时的算法死守黑白二值判断！（抛撒彩虹糖）呐呐呐"
+8.例如："哎哟喂！日本学生冻成狗还得光腿穿校服，校方倒好，死守“黑校规”不放！要说这事儿啊，日本教育就是个奇葩——冬天积雪三米厚，校服薄得像纸，却禁止穿裤袜、羽绒服，连围巾都不让围！学生冻出冻疮、家长缝棉袄、网购“光腿神器”，这波操作直接把我看傻了！其实啊，这些“黑校规”都是陈年老黄历了，比如强制染黑发、检查内衣颜色，连美国血统的棕发学生都被逼辍学！现在倒好，寒潮一来全暴露了！东京有学校开始松口，允许穿羽绒服了，但大部分学校还在装死！扯犊子归扯犊子，教育要是连人命关天的温度都管不好，还谈什么培养人才？赶紧废除这些狗屁规定吧，别让下一代在寒风里读“冰书”！
+
+"
 `;
 
 // 导入配置
@@ -25,7 +27,7 @@ import CONFIG from './config.js';
 // 本地存储键名
 const STORAGE_KEYS = {
     SYSTEM_PROMPT: 'system_prompt',
-    VOICE_SETTINGS: 'voice_settings'
+  VOICE_SETTINGS: 'voice_settings'
 };
 
 // Toast提示管理器
@@ -259,7 +261,7 @@ class VoiceSettingsManager {
     saveSettings() {
         try {
             localStorage.setItem(STORAGE_KEYS.VOICE_SETTINGS, JSON.stringify(this.settings));
-        } catch (error) {
+  } catch (error) {
             console.error('Failed to save voice settings:', error);
         }
     }
@@ -278,6 +280,89 @@ class VoiceSettingsManager {
 
     getSettings() {
         return { ...this.settings };
+    }
+}
+
+// T2A API管理器
+class T2AManager {
+    constructor(voiceSettings) {
+        this.voiceSettings = voiceSettings;
+    }
+
+    async generateSpeech(text, retryCount = 0) {
+        try {
+            // 验证配置
+            if (!CONFIG.GROUP_ID || !CONFIG.API_KEY) {
+                throw new Error('缺少必要的配置参数（GROUP_ID或API_KEY）');
+            }
+
+            // 验证文本
+            if (!text || text.trim().length === 0) {
+                throw new Error('文本内容不能为空');
+            }
+
+            const settings = this.voiceSettings.getSettings();
+            
+            // 使用简化的请求格式
+            const requestData = {
+                voice_id: 'jirui666',
+                text: text.trim(),
+                model: 'speech-01',
+                speed: parseFloat(settings.speed) || 1.0,
+                vol: parseFloat(settings.volume) || 1.0,
+                pitch: parseInt(settings.pitch) || 0
+            };
+
+            // 使用正确的API端点
+            const url = `${CONFIG.ENDPOINTS.TEXT_TO_SPEECH}?GroupId=${CONFIG.GROUP_ID}`;
+            
+            console.log('T2A请求URL:', url);
+            console.log('T2A请求数据:', JSON.stringify(requestData, null, 2));
+
+            loading.show();
+            toast.show('正在生成语音...', 'info');
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${CONFIG.API_KEY}`
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            // 检查响应状态
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('T2A错误响应:', errorText);
+                throw new Error(`语音合成失败 (${response.status}): ${errorText}`);
+            }
+
+            // 检查Content-Type
+            const contentType = response.headers.get('Content-Type');
+            console.log('响应Content-Type:', contentType);
+
+            if (contentType && contentType.includes('application/json')) {
+                // 如果是JSON响应,说明有错误
+                const errorData = await response.json();
+                console.error('T2A错误数据:', errorData);
+                throw new Error(errorData.error?.message || '语音合成失败');
+            }
+
+            // 直接获取二进制数据
+            const audioData = await response.arrayBuffer();
+            console.log('获取到音频数据，大小:', audioData.byteLength, '字节');
+            
+            // 验证数据大小
+            if (audioData.byteLength < 100) {
+                throw new Error('返回的音频数据过小,可能无效');
+            }
+
+            return audioData;
+        } catch (error) {
+            console.error('T2A API调用失败:', error);
+            throw error;
+        }
     }
 }
 
@@ -318,127 +403,213 @@ class AudioManager {
 
         this.audio.addEventListener('loadeddata', () => {
             console.log('音频数据加载完成');
-            this.updateButtonStates(true);
+            toast.show('音频加载完成', 'success');
         });
     }
 
     setAudioData(data) {
-        // 释放之前的Blob URL
+        // 清理之前的资源
+        this.cleanup();
+        
+        // 保存数据
+        this.audioData = data;
+        console.log('设置音频数据:', data.byteLength, '字节');
+        
+        try {
+            // 创建新的播放方法
+            this.setupPlayback();
+        } catch (error) {
+            console.error('设置音频数据失败:', error);
+            toast.show(`音频处理失败: ${error.message}`, 'error');
+        }
+    }
+    
+    // 清理资源
+    cleanup() {
+        if (this.audio) {
+            this.audio.pause();
+            this.audio.src = '';
+        }
+        
         if (this.currentBlobUrl) {
             URL.revokeObjectURL(this.currentBlobUrl);
+            this.currentBlobUrl = null;
         }
-
-        this.audioData = data;
-        const blob = new Blob([data], { type: 'audio/mp3' });
-        this.currentBlobUrl = URL.createObjectURL(blob);
         
-        // 重置音频状态
-        this.audio.src = this.currentBlobUrl;
         this.isPlaying = false;
-        this.audio.load(); // 确保加载新的音频数据
+    }
+    
+    // 设置音频播放
+    setupPlayback() {
+        if (!this.audioData || this.audioData.byteLength === 0) {
+            throw new Error('无效的音频数据');
+        }
         
-        console.log('设置新的音频数据');
+        // 方法1：使用audio元素直接播放
+        try {
+            const blob = new Blob([this.audioData], { type: 'audio/mpeg' });
+            this.currentBlobUrl = URL.createObjectURL(blob);
+            
+            // 创建一个测试的audio元素来验证
+            const testAudio = new Audio();
+            testAudio.src = this.currentBlobUrl;
+            
+            // 设置oncanplaythrough事件来验证音频可以播放
+            const canPlayPromise = new Promise((resolve, reject) => {
+                const timeoutId = setTimeout(() => {
+                    testAudio.removeEventListener('canplaythrough', canPlayHandler);
+                    testAudio.removeEventListener('error', errorHandler);
+                    reject(new Error('音频加载超时'));
+                }, 5000);
+                
+                const canPlayHandler = () => {
+                    clearTimeout(timeoutId);
+                    testAudio.removeEventListener('error', errorHandler);
+                    resolve();
+                };
+                
+                const errorHandler = (e) => {
+                    clearTimeout(timeoutId);
+                    testAudio.removeEventListener('canplaythrough', canPlayHandler);
+                    reject(new Error(`音频加载错误: ${e.message}`));
+                };
+                
+                testAudio.addEventListener('canplaythrough', canPlayHandler, { once: true });
+                testAudio.addEventListener('error', errorHandler, { once: true });
+                
+                // 开始加载音频
+                testAudio.load();
+            });
+            
+            // 等待验证结果
+            canPlayPromise.then(() => {
+                console.log('音频验证成功，可以播放');
+                // 设置实际的音频元素
+                this.audio.src = this.currentBlobUrl;
+                this.audio.load();
+                this.updateButtonStates(true);
+            }).catch(error => {
+                console.error('音频验证失败:', error);
+                // 如果方法1失败，尝试方法2：使用Web Audio API
+                this.setupWebAudioPlayback();
+            });
+        } catch (error) {
+            console.error('设置Audio元素播放失败:', error);
+            // 尝试方法2
+            this.setupWebAudioPlayback();
+        }
+    }
+    
+    // 使用Web Audio API设置播放
+    setupWebAudioPlayback() {
+        console.log('尝试使用Web Audio API播放');
+        
+        // 创建AudioContext
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.audioContext = new AudioContext();
+        
+        // 解码音频数据
+        this.audioContext.decodeAudioData(
+            this.audioData, 
+            (buffer) => {
+                console.log('音频解码成功，样本数:', buffer.length);
+                this.audioBuffer = buffer;
+                this.updateButtonStates(true);
+                toast.show('音频准备就绪（使用Web Audio API）', 'success');
+            },
+            (error) => {
+                console.error('解码音频失败:', error);
+                toast.show('解码音频失败，MP3可能无效', 'error');
+            }
+        );
     }
 
     play() {
-        if (this.audio.src) {
-            console.log('开始播放音频');
-            this.audio.play().catch(error => {
-                console.error('播放失败:', error);
-                toast.show('播放失败，请重试', 'error');
-            });
-            this.isPlaying = true;
-            this.updateButtonStates();
-        } else {
-            console.warn('没有可播放的音频数据');
-            toast.show('没有可播放的音频', 'warning');
+        try {
+            if (this.audioBuffer && this.audioContext) {
+                // 使用Web Audio API播放
+                if (this.source) {
+                    this.source.stop();
+                }
+                
+                this.source = this.audioContext.createBufferSource();
+                this.source.buffer = this.audioBuffer;
+                this.source.connect(this.audioContext.destination);
+                
+                this.source.onended = () => {
+                    this.isPlaying = false;
+                    this.updateButtonStates();
+                };
+                
+                this.source.start(0);
+                this.isPlaying = true;
+                this.updateButtonStates();
+            } else if (this.audio.src) {
+                // 使用Audio元素播放
+                console.log('开始播放音频');
+                this.audio.play().catch(error => {
+                    console.error('播放失败:', error);
+                    toast.show('播放失败，请重试', 'error');
+                });
+                this.isPlaying = true;
+                this.updateButtonStates();
+            } else {
+                console.warn('没有可播放的音频数据');
+                toast.show('没有可播放的音频', 'warning');
+            }
+        } catch (error) {
+            console.error('播放时出错:', error);
+            toast.show(`播放失败: ${error.message}`, 'error');
         }
     }
 
     pause() {
-        console.log('暂停播放音频');
-        this.audio.pause();
-        this.isPlaying = false;
-        this.updateButtonStates();
+        try {
+            if (this.source) {
+                // 停止Web Audio API播放
+                this.source.stop();
+                this.source = null;
+                this.isPlaying = false;
+            } else if (this.audio) {
+                // 停止Audio元素播放
+                this.audio.pause();
+                this.isPlaying = false;
+            }
+            this.updateButtonStates();
+        } catch (error) {
+            console.error('暂停播放时出错:', error);
+        }
     }
 
     download() {
         if (this.audioData) {
-            const blob = new Blob([this.audioData], { type: 'audio/mp3' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = '广播内容.mp3';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            try {
+                const blob = new Blob([this.audioData], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '广播内容.mp3';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast.show('下载已开始', 'success');
+            } catch (error) {
+                console.error('下载音频时出错:', error);
+                toast.show(`下载失败: ${error.message}`, 'error');
+            }
         } else {
             toast.show('没有可下载的音频', 'warning');
         }
     }
 
     updateButtonStates(hasAudio = false) {
-        const audioAvailable = hasAudio || (this.audio.src && this.audioData);
+        const audioAvailable = hasAudio || (this.audio.src && this.audioData) || (this.audioBuffer && this.audioContext);
         console.log('更新按钮状态:', { audioAvailable, isPlaying: this.isPlaying });
         
         this.playButton.disabled = !audioAvailable || this.isPlaying;
         this.pauseButton.disabled = !audioAvailable || !this.isPlaying;
         this.downloadButton.disabled = !audioAvailable;
-    }
-}
-
-// T2A API管理器
-class T2AManager {
-    constructor(voiceSettings) {
-        this.voiceSettings = voiceSettings;
-    }
-
-    async generateSpeech(text) {
-        try {
-            const settings = this.voiceSettings.getSettings();
-            const requestData = {
-                model: 'speech-01-turbo',
-                text: text,
-                stream: false,
-                voice_setting: {
-                    voice_id: 'jirui666',
-                    speed: settings.speed,
-                    vol: settings.volume,
-                    pitch: settings.pitch,
-                    emotion: settings.emotion
-                },
-                audio_setting: {
-                    sample_rate: 32000,
-                    bitrate: 128000,
-                    format: 'mp3',
-                    channel: 1
-                }
-            };
-
-            console.log('T2A请求数据:', requestData);
-
-            const response = await fetch(`${CONFIG.ENDPOINTS.T2A}?GroupId=${CONFIG.GROUP_ID}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${CONFIG.API_KEY}`
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('T2A错误响应:', errorText);
-                throw new Error(`语音合成失败: ${response.status}`);
-            }
-
-            return await response.arrayBuffer();
-
-        } catch (error) {
-            console.error('T2A API调用失败:', error);
-            throw error;
-        }
     }
 }
 

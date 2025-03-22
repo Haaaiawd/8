@@ -1,0 +1,28 @@
+// MiniMax API配置
+const CONFIG = {
+    // MiniMax API密钥 - 替换为你的API密钥
+    API_KEY: "your_api_key_here",
+    
+    // MiniMax Group ID - 替换为你的Group ID
+    GROUP_ID: "your_group_id_here",
+    
+    // API端点
+    ENDPOINTS: {
+        TEXT: "https://api.minimax.chat/v1/text/chatcompletion_v2",
+        TEXT_TO_SPEECH: "https://api.minimax.chat/v1/text_to_speech"
+    },
+    
+    // 语音设置默认值
+    VOICE_DEFAULTS: {
+        voice_id: "jirui666",
+        speed: 1.0,
+        vol: 1.0,
+        pitch: 0,
+        emotion: "neutral"
+    }
+};
+
+// 防止直接修改配置
+Object.freeze(CONFIG);
+
+export default CONFIG; 

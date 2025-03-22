@@ -1,42 +1,70 @@
-# 降噪 AI广播编辑器
+# 降噪 AI 广播编辑器
 
-一个基于Web的AI广播内容编辑工具，用于将专业的AI技术文章转化为通俗易懂的广播稿件，并提供语音合成功能。
+一个基于 AI 的广播内容编辑工具，可以将专业的 AI 文章转化为通俗易懂的广播内容，并支持文本转语音功能。
 
 ## 功能特点
 
-- 文本输入和编辑
-  - 系统提示词（可展开/折叠）
-  - 原始文案输入区
-  - AI生成内容显示区
-  - 一键清空和复制功能
+- 🤖 AI 驱动的内容改写
+- 🎙️ 文本转语音功能
+- 🎛️ 可调节的语音参数
+- 💾 音频下载功能
+- 🎨 现代化的界面设计
 
-- AI模型集成
-  - 使用MiniMax Text-01模型
-  - 异步请求处理
-  - 完整的错误处理机制
+## 快速开始
 
-- 语音合成功能
-  - 使用MiniMax T2A v2接口
-  - 自定义音色（superhuangclone）
-  - 播放控制（播放/暂停）
-  - MP3下载功能
-  - 语音参数调节（语速、音量、音调、情绪）
+1. 克隆仓库：
+```bash
+git clone https://github.com/your-username/noise-reduction-ai-broadcast-editor.git
+cd noise-reduction-ai-broadcast-editor
+```
+
+2. 安装依赖：
+```bash
+npm install
+```
+
+3. 配置 API：
+   - 复制 `static/js/config.js.example` 为 `static/js/config.js`
+   - 在 `config.js` 中填入你的 MiniMax API 密钥和 Group ID
+
+4. 启动服务：
+```bash
+npm start
+```
+
+5. 访问应用：
+   打开浏览器访问 `http://localhost:3000`
+
+## 使用说明
+
+1. 在输入框中粘贴需要转换的 AI 文章内容
+2. 点击"生成内容"按钮，等待 AI 改写完成
+3. 调整语音参数（可选）
+4. 点击"生成语音"按钮将文本转换为语音
+5. 使用播放控制按钮试听，或下载生成的音频文件
 
 ## 技术栈
 
-- HTML5
-- CSS3
-- JavaScript（原生）
-- Bootstrap 5
+- 前端：HTML5, CSS3, JavaScript (ES6+)
+- UI 框架：Bootstrap 5
+- API：MiniMax AI API
+- 开发服务器：http-server
 
-## 本地开发
+## 配置说明
 
-1. 克隆项目到本地
-2. 在浏览器中打开index.html文件
-3. 开始开发
+在 `config.js` 中可以配置以下参数：
+
+- `API_KEY`：MiniMax API 密钥
+- `GROUP_ID`：MiniMax Group ID
+- `ENDPOINTS`：API 端点配置
+- `VOICE_DEFAULTS`：语音参数默认值
 
 ## 注意事项
 
-- 需要配置MiniMax API密钥
-- 建议在本地服务器环境中运行，以避免CORS限制
-- 确保浏览器支持localStorage功能
+- 请勿将包含 API 密钥的 `config.js` 文件提交到代码仓库
+- 音频文件生成可能需要一定时间，请耐心等待
+- 建议使用现代浏览器以获得最佳体验
+
+## 许可证
+
+MIT License
